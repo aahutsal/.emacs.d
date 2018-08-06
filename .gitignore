@@ -4,7 +4,8 @@
 /network-security.data
 /init.el~
 /ac-comphist.dat
-/backups/!home!archer!.emacs.d!el-get!.loaddefs.el~
-/backups/!home!archer!.emacs.d!init.el.~1~
-/el-get/.loaddefs.el
-/el-get/.loaddefs.elc
+/el-get/*
+/backups/*
+/el-get/*
+/elpa/*
+/magithub/*
