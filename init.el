@@ -202,10 +202,8 @@
    switch-window ; takes over C-x o
    auto-complete ; complete as you type with overlays
    zencoding-mode ; http://www.emacswiki.org/emacs/ZenCoding
-   color-theme    ; nice looking emacs
    color-theme-solarized ; check out color-theme-solarized
    emacs-w3m))
-
 
                                         ;
 ;; Some recipes require extra tools to be installed
@@ -652,5 +650,8 @@ pastes from X-SECONDARY."
 ;; keybindings
 (global-set-key (kbd "C-x w s") 'w3m-search)
 (global-set-key (kbd "C-x g s") 'w3m-goto-url)
+
+;;; Styling
+(color-theme-solarized-light)
 
 (provide 'init)
