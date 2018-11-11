@@ -1,9 +1,14 @@
+;;; package --- summary
 ;; My emacs config initialization file
 ;; ELPA makes it easy to install packages without tracking down all the
 ;; different websites. Let's define a function that makes it easy to
 ;; install packages. I don't actually use this a lot any more, but it can
 ;; be handy.
 ;; This sets up the load path so that we can override it
+
+;;; Commentary:
+;; ***
+
 
 (menu-bar-mode -1)
 (tool-bar-mode -1)
@@ -46,6 +51,10 @@
                    (global-set-key (kbd "M-x") 'smex)
                    (global-set-key (kbd "M-X") 'smex-major-mode-commands)))
 
+   (:name nodejs-repl; nodejs REPL
+          :after (progn
+                   (global-set-key (kbd "C-c C-n") 'nodejs-repl)
+                   ))
    (:name magit; git meet emacs, and a binding
           :after (progn
                    (global-set-key (kbd "C-x C-z") 'magit-status)
@@ -74,7 +83,7 @@
    (:name yasnippet;
           :after (progn
                    ;;initialization
-                   ))   
+                   ))
    (:name yasnippet-snippets;
           :after (progn
                    ;;initialization
@@ -87,6 +96,30 @@
           :after (progn
                    ;;initialization
                    ))
+   (:name flycheck;
+          :after (progn
+                   ;;initialization
+                   ))
+   (:name json-mode;
+          :after (progn
+                   ;;initialization
+                   ))
+   (:name web-mode;
+          :after (progn
+                   ;;initialization
+                   ))
+
+   (:name editorconfig;
+          :after (progn
+                   ;;initialization
+                   (require 'editorconfig)
+                   (editorconfig-mode 1)
+
+                   :ensure t
+                   :config
+                   (editorconfig-mode 1)
+                   ))
+
    (:name ivy-bibtex;
           :after (progn
                    ;;initialization
@@ -103,7 +136,7 @@
           :after (progn
                    ;;initialization
                    ))
-   
+
    (:name js2-mode;
           :after (progn
                    ;;initialization
@@ -150,7 +183,7 @@
    ;;                  'org-babel-load-languages
    ;;                  '(;; other Babel languages
    ;;                    (plantuml . t)))
-                   
+
    ;;                 (setq org-plantuml-jar-path "/home/archer/.emacs.d/plantuml.jar")
    ;;                 (defun my-org-confirm-babel-evaluate (lang body)
    ;;                   (not (string= lang "plantuml")))  ; don't ask for ditaa
@@ -158,17 +191,20 @@
    ;;                 ))
    ))
 
+;; (require 'ng2-mode)
 
 ;; now set our own packages
 (setq
  my:el-get-packages
  '(el-get ; el-get is self-hosting
-   use-package websocket request oauth2 circe alert emojify evil ; needed for slack 
+
+   use-package websocket request oauth2 circe alert emojify evil ; needed for slack
    switch-window ; takes over C-x o
    auto-complete ; complete as you type with overlays
    zencoding-mode ; http://www.emacswiki.org/emacs/ZenCoding
    color-theme    ; nice looking emacs
-   color-theme-tango)) ; check out color-theme-solarized
+   color-theme-solarized ; check out color-theme-solarized
+   emacs-w3m))
 
 
                                         ;
@@ -211,9 +247,67 @@
 
 (setq-default indent-tabs-mode nil)
 
-(setq js2-mode-hook                                                    
+;;
+;; use web-mode for .jsx files
+(add-to-list 'auto-mode-alist '("\\.jsx$" . web-mode))
+
+;; http://www.flycheck.org/manual/latest/index.html
+(require 'flycheck)
+
+;; turn on flychecking globally
+(add-hook 'after-init-hook #'global-flycheck-mode)
+
+;; deleting trailing whitespaces before saving
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+;; disable jshint since we prefer eslint checking
+(setq-default flycheck-disabled-checkers
+  (append flycheck-disabled-checkers
+    '(javascript-jshint)))
+
+;; use eslint with web-mode for jsx files
+(flycheck-add-mode 'javascript-eslint 'web-mode)
+
+;; customize flycheck temp file prefix
+(setq-default flycheck-temp-prefix ".flycheck")
+
+;; disable json-jsonlist checking for json files
+(setq-default flycheck-disabled-checkers
+  (append flycheck-disabled-checkers
+    '(json-jsonlist)))
+
+;; use local eslint from node_modules before global
+;; http://emacs.stackexchange.com/questions/21205/flycheck-with-file-relative-eslint-executable
+(defun my/use-eslint-from-node-modules ()
+  (let* ((root (locate-dominating-file
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (eslint (and root
+                      (expand-file-name "node_modules/eslint/bin/eslint.js"
+                                        root))))
+    (when (and eslint (file-executable-p eslint))
+      (setq-local flycheck-javascript-eslint-executable eslint))))
+(add-hook 'flycheck-mode-hook #'my/use-eslint-from-node-modules)
+
+;; adjust indents for web-mode to 2 spaces
+(defun my-web-mode-hook ()
+  "Hooks for Web mode. Adjust indents"
+  ;;; http://web-mode.org/
+  (setq web-mode-markup-indent-offset 2)
+  (setq web-mode-css-indent-offset 2)
+  (setq web-mode-code-indent-offset 2))
+(add-hook 'web-mode-hook  'my-web-mode-hook)
+
+;; for better jsx syntax-highlighting in web-mode
+;; - courtesy of Patrick @halbtuerke
+(defadvice web-mode-highlight-part (around tweak-jsx activate)
+  (if (equal web-mode-content-type "jsx")
+    (let ((web-mode-enable-part-face nil))
+      ad-do-it)
+    ad-do-it))
+(setq js2-mode-hook
   '(lambda () (progn
-    (set-variable 'indent-tabs-mode nil))))                            
+    (set-variable 'indent-tabs-mode nil))))
 
 (setq window-system "x")
 
@@ -255,9 +349,9 @@
 ;; I keep slightly more sensitive information in a separate file so that I can easily publish my main configuration.
 (load "~/.emacs.secrets" t)
 
-;; This is one of the things people usually want to change right away. 
-;; By default, Emacs saves backup files in the current directory. 
-;; These are the files ending in =~= that are cluttering up your directory lists. 
+;; This is one of the things people usually want to change right away.
+;; By default, Emacs saves backup files in the current directory.
+;; These are the files ending in =~= that are cluttering up your directory lists.
 ;; The following code stashes them all in =~/.emacs.d/backups=, where I can find them with =C-x C-f= (=find-file=) if I really need to.
 
 (setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
@@ -283,8 +377,8 @@
 ;; My custom keybindings
 (global-set-key (kbd "C-x C-o") 'previous-multiframe-window)
 
-;; =winner-mode= lets you use =C-c <left>= and =C-c <right>= to switch between window configurations. 
-;; This is handy when something has popped up a buffer that you want to look at briefly before returning to whatever you were working on. 
+;; =winner-mode= lets you use =C-c <left>= and =C-c <right>= to switch between window configurations.
+;; This is handy when something has popped up a buffer that you want to look at briefly before returning to whatever you were working on.
 ;; When you're done, press =C-c <left>=.
 
 (require 'winner)
@@ -331,7 +425,7 @@
   (kill-this-buffer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  
+
 ;; custom keybindings
 (global-set-key (kbd "C-x C-b") 'ibuffer)
 (autoload 'ibuffer "ibuffer" "List buffers." t)
@@ -344,7 +438,7 @@
    [default bold shadow italic underline bold bold-italic bold])
  '(ansi-color-names-vector
    ["#2d3743" "#ff4242" "#74af68" "#dbdb95" "#34cae2" "#008b8b" "#00ede1" "#e1e1e0"])
- '(custom-enabled-themes (quote (misterioso)))
+ '(custom-enabled-themes nil)
  '(custom-safe-themes
    (quote
     ("a4a04f7c497d2953ccb0efed4753e34db63ca470797e580dd0a227c5019eaa4b" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" default)))
@@ -356,7 +450,7 @@
     ("/home/archer/dev/" "/home/archer/Desktop/Projects")) nil (org-trello))
  '(package-selected-packages
    (quote
-    (smart-tabs-mode w3m react-snippets slack markdown-mode+ ox-ioslide skype nodejs-repl mocha-snippets js2-highlight-vars editorconfig-core discover-js2-refactor chess angular-snippets ac-js2)))
+    (ng2-mode alert restclient-test restclient-helm ob-restclient lsp-intellij smart-tabs-mode w3m react-snippets slack markdown-mode+ ox-ioslide skype nodejs-repl mocha-snippets js2-highlight-vars editorconfig-core discover-js2-refactor chess angular-snippets ac-js2)))
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
    (quote
@@ -483,37 +577,15 @@ pastes from X-SECONDARY."
      (insert (shell-command-to-string (concat "xsel -o -" opt))))))
 
 ;; ACE window
-(global-set-key (kbd "M-S-p")     'evil-window-up)
-(global-set-key (kbd "M-S-n")     'evil-window-down)
-(global-set-key (kbd "M-S-f")     'evil-window-right)
-(global-set-key (kbd "M-S-b")     'evil-window-left)
-(global-set-key (kbd "M-S-a")     'ace-window)
+(global-set-key (kbd "C-x M-p")     'evil-window-up)
+(global-set-key (kbd "C-x M-n")     'evil-window-down)
+(global-set-key (kbd "C-x M-f")     'evil-window-right)
+(global-set-key (kbd "C-x M-b")     'evil-window-left)
+(global-set-key (kbd "C-x M-a")     'ace-window)
 
 ;; ac-js-mode
 
 (add-hook 'js2-mode-hook 'ac-js2-mode)
-
-;; ;; ;; w3m-search
-;; (require 'w3m-search)
-;; (add-to-list 'w3m-search-engine-alist
-;;              '("stackoverflow" "http://www.stackoverflow.com/search?q=%s")
-;;              '("google" "http://www.stackoverflow.com/search?q=%s")
-;; )
-;; (setq w3m-search-default-engine "stackoverflow")
-
-;; TODO fix it
-(defadvice w3m-search (after change-default activate)
-  (let ((engine (nth 1 minibuffer-history)))
-    (when (assoc engine w3m-search-engine-alist)
-      (setq w3m-search-default-engine engine))))
-
-(global-set-key (kbd "C-x w s")     'w3m-search)
-
-;; Make the previous search engine the default for the next
-;; search.;
-
-;; keybindings
-(global-set-key (kbd "C-x g s") 'w3m-goto-url)
 
 ;; nxml
 (setq nxml-child-indent 2 nxml-attribute-indent 2)
@@ -551,3 +623,34 @@ pastes from X-SECONDARY."
 
 (el-get-bundle doremi)
 (put 'downcase-region 'disabled nil)
+
+
+;; w3m-search
+;;  ------------------------------------------------------------------------------------------------------------------
+;; As far as I know, there is no tight integration of CPAN into Emacs, so going through shell will probably be your best
+;; bet. If you use w3m-el, you may also find this useful:
+;; (add-to-list 'w3m-search-engine-alist '("cpan" "http://search.cpan.org/search?query=%s&n=100"))
+;; From within any w3m buffer, I use this and a few keystrokes (C-u S RET cpan RET <search-term>) to find CPAN modules.
+;; ------------------------------------------------------------------------------------------------------------------
+(require 'w3m-search)
+(add-to-list 'w3m-search-engine-alist
+             '("stackoverflow" "http://www.stackoverflow.com/search?q=%s")
+             '("google" "http://www.stackoverflow.com/search?q=%s")
+)
+(setq w3m-search-default-engine "stackoverflow")
+;;  -----------------------------------------------------------------------------------------------------------------
+
+;; TODO fix it
+(defadvice w3m-search (after change-default activate)
+  (let ((engine (nth 1 minibuffer-history)))
+    (when (assoc engine w3m-search-engine-alist)
+      (setq w3m-search-default-engine engine))))
+
+;; Make the previous search engine the default for the next
+;; search.;
+
+;; keybindings
+(global-set-key (kbd "C-x w s") 'w3m-search)
+(global-set-key (kbd "C-x g s") 'w3m-goto-url)
+
+(provide 'init)
