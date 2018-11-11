@@ -652,6 +652,6 @@ pastes from X-SECONDARY."
 (global-set-key (kbd "C-x g s") 'w3m-goto-url)
 
 ;;; Styling
-(color-theme-solarized-light)
+(color-theme-solarized)
 
 (provide 'init)
